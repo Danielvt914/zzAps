@@ -1,0 +1,6 @@
+streamlit
+numpy
+math
+re
+streamlit.components.v1
+pandas

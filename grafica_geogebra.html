@@ -1,0 +1,33 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <script src="https://www.geogebra.org/apps/deployggb.js"></script>
+        </head>
+        <body>
+            <div id="ggb-element"></div>
+
+            <script>
+                var params = {
+                    "appName": "graphing",
+                    "width": 800,
+                    "height": 600,
+                    "showToolBar": true,
+                    "showAlgebraInput": true,
+                    "showMenuBar": true
+                };
+
+                var applet = new GGBApplet(params, true);
+
+                window.onload = function() {
+                    applet.inject('ggb-element');
+
+                    setTimeout(function() {
+                        ggbApplet.evalCommand("f(x) = sin(x)");
+                        
+                    }, 1000);
+                };
+            </script>
+        </body>
+        </html>
+        
