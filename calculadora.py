@@ -4,8 +4,9 @@ import math
 import re
 import streamlit.components.v1 as components
 import pandas as pd
+import matplotlib.pyplot as plt
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(layout="wide", page_title="Engine Calculus - GeoGebra")
+st.set_page_config(layout="wide", page_title="Fisica")
 
 # --- TUS CORRECCIONES Y DICCIONARIOS ---
 correcciones = {
@@ -768,61 +769,104 @@ if st.session_state.calculado and metodo_sel != "Grafica basica":
         st.warning("El método no generó resultados.")
             
             
-st.subheader("Visualización GeoGebra")
+st.subheader("Visualización")
+graficar()
+def graficar():
 
-# Limpiar la función para GeoGebra
-func_ggb = func_input.replace("**", "^")
+    if func_input.strip()=="":
+        return
 
-# Construcción segura de los comandos de puntos
-# GeoGebra usa el punto (.) como separador decimal, asegurémonos de eso
-puntos_js = ""
-for i, px in enumerate(st.session_state.puntos):        # Convertimos a string con formato de punto decimal por si acaso
-    px_val = f"{px:.8f}".replace(",", ".")
-    puntos_js += f'ggbApplet.evalCommand("P_{i}=({px_val}, 0)");\n'
+    try:
 
-ggb_html = f"""
-<script src="https://www.geogebra.org/apps/deployggb.js"></script>
-<div id="ggb-element" style="border: 1px solid #ddd; border-radius: 8px;"></div>
+        exp_py=limpiar_expresion(func_input)
+        f=lambda x: eval(
+            exp_py,
+            {"x":x,"np":np,"math":math}
+        )
 
-<script>
-var params = {{
-    "appName": "graphing",
-    "width": 1100,
-    "height": 600,
-    "showAlgebraInput": true,
-    "showToolBar": true,
-    "enableLabelDrags": false,
-    "errorDialogsActive": true
-}};
-var applet = new GGBApplet(params, true);
+        fig,ax=plt.subplots(
+            figsize=(12,6)
+        )
 
-// Función para enviar los comandos cuando el applet esté listo
-function enviarComandos() {{
-    if (window.ggbApplet && typeof ggbApplet.evalCommand === 'function') {{
-        // Limpiar comandos previos
-        ggbApplet.newConstruction();
-        
-        // Graficar función
-        ggbApplet.evalCommand("f(x) = {func_ggb}");
-        
-        // Graficar puntos
-        {puntos_js}
-        
-        // Ajustar vista para que se vean los puntos
-        ggbApplet.evalCommand("ZoomIn(-10, -10, 10, 10)"); 
-    }} else {{
-        // Si no está listo, reintentar en 500ms
-        setTimeout(enviarComandos, 500);
-    }}
-}}
+        x=np.linspace(-10,10,1000)
+        y=f(x)
 
-window.onload = function() {{   
-    applet.inject('ggb-element');
-    enviarComandos();
-}};
-</script>
-"""
-if st.session_state.calculado:
-    components.html(ggb_html, height=600)
+        ax.plot(
+            x,
+            y,
+            label="f(x)"
+        )
+
+        ax.axhline(
+            0,
+            linewidth=1
+        )
+
+        ax.axvline(
+            0,
+            linewidth=1
+        )
 
 
+        # puntos iterativos
+        if len(st.session_state.puntos)>0:
+
+            px=np.array(
+                st.session_state.puntos
+            )
+
+            py=f(px)
+
+            ax.scatter(
+                px,
+                py,
+                s=60
+            )
+
+            for i,(xp,yp) in enumerate(zip(px,py)):
+                ax.annotate(
+                    f"P{i}",
+                    (xp,yp)
+                )
+
+
+        # -------- trapecio y simpson sombreado --------
+
+        if (
+            metodo_sel in [
+                "Trapecio",
+                "Simpson13",
+                "Simpson38"
+            ]
+            and st.session_state.calculado
+            and 'li' in locals()
+            and 'ls' in locals()
+        ):
+
+            xx=np.linspace(
+                li,
+                ls,
+                300
+            )
+
+            yy=f(xx)
+
+            ax.fill_between(
+                xx,
+                yy,
+                alpha=0.3
+            )
+
+
+        ax.grid(True)
+        ax.legend()
+
+        st.pyplot(
+            fig,
+            use_container_width=True
+        )
+
+    except:
+        st.info(
+            "No se pudo graficar."
+        )
