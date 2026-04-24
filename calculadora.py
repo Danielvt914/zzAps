@@ -770,7 +770,6 @@ if st.session_state.calculado and metodo_sel != "Grafica basica":
             
             
 st.subheader("Visualización")
-graficar()
 def graficar():
 
     if func_input.strip()=="":
@@ -870,3 +869,4 @@ def graficar():
         st.info(
             "No se pudo graficar."
         )
+graficar()
