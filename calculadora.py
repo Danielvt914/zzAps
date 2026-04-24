@@ -105,38 +105,116 @@ def secante(f, x0, x1, tol=1e-5):
         x0, x1 = x1, x2
         i+=1
     return list_output
-def trapecio(f, li, ls, n):
-    n = int(n)
-    xs, ys = values_table(f, li, ls, n)
-    h = (ls - li) / n
-    suma = sum(2 * ys[i] for i in range(1, n))
-    resultado = (h / 2) * (ys[0] + ys[-1] + suma)
-    # Retornamos los pasos clave
-    return [[n, h, resultado]]
+def trapecio(f=None, li=None, ls=None, n=None, xs=None, ys=None):
 
-def simpson_tercio(f, li, ls, n):
-    n = int(n)
-    if n % 2 != 0:
-        raise ValueError("Para Simpson 1/3, 'n' debe ser par.")
-    xs, ys = values_table(f, li, ls, n)
-    h = (ls - li) / n
-    suma = 0
-    for i in range(1, n):
-        suma += (4 * ys[i] if i % 2 != 0 else 2 * ys[i])
-    resultado = (h / 3) * (ys[0] + ys[-1] + suma)
-    return [[n, h, resultado]]
+    if xs is not None and ys is not None:
+        if len(xs)!=len(ys):
+            raise ValueError("x e y deben tener misma longitud")
 
-def simpson_38(f, li, ls, n):
-    n = int(n)
-    if n % 3 != 0:
-        raise ValueError("Para Simpson 3/8, 'n' debe ser múltiplo de 3.")
-    xs, ys = values_table(f, li, ls, n)
-    h = (ls - li) / n
-    suma = 0
-    for i in range(1, n):
-        suma += (2 * ys[i] if i % 3 == 0 else 3 * ys[i])
-    resultado = (3 * h / 8) * (ys[0] + ys[-1] + suma)
-    return [[n, h, resultado]]
+        h=triplePtS(xs)
+
+        suma=0
+        for i in range(1,len(ys)-1):
+            suma+=2*ys[i]
+
+        resultado=(h/2)*(ys[0]+ys[-1]+suma)
+
+        return [[len(xs)-1,h,resultado]]
+
+    # modo función
+    n=int(n)
+    xs,ys=values_table(f,li,ls,n)
+    h=(ls-li)/n
+
+    suma=0
+    for i in range(1,n):
+        suma+=2*ys[i]
+
+    resultado=(h/2)*(ys[0]+ys[-1]+suma)
+
+    return [[n,h,resultado]]
+
+def simpson_tercio(f=None, li=None, ls=None, n=None, xs=None, ys=None):
+
+    if xs is not None and ys is not None:
+
+        if len(xs)%2==0:
+            raise ValueError("Simpson 1/3 requiere número impar de puntos")
+
+        h=triplePtS(xs)
+
+        suma=0
+
+        for i in range(1,len(ys)-1):
+            if i%2!=0:
+                suma+=4*ys[i]
+            else:
+                suma+=2*ys[i]
+
+        resultado=(h/3)*(ys[0]+ys[-1]+suma)
+
+        return [[len(xs)-1,h,resultado]]
+
+    n=int(n)
+
+    if n%2!=0:
+        raise ValueError("n debe ser par")
+
+    xs,ys=values_table(f,li,ls,n)
+
+    h=(ls-li)/n
+    suma=0
+
+    for i in range(1,n):
+        if i%2!=0:
+            suma+=4*ys[i]
+        else:
+            suma+=2*ys[i]
+
+    resultado=(h/3)*(ys[0]+ys[-1]+suma)
+
+    return [[n,h,resultado]]
+
+def simpson_38(f=None, li=None, ls=None, n=None, xs=None, ys=None):
+
+    if xs is not None and ys is not None:
+
+        if (len(xs)-1)%3!=0:
+            raise ValueError("Segmentos deben ser múltiplo de 3")
+
+        h=triplePtS(xs)
+
+        suma=0
+
+        for i in range(1,len(ys)-1):
+            if i%3==0:
+                suma+=2*ys[i]
+            else:
+                suma+=3*ys[i]
+
+        resultado=(3*h/8)*(ys[0]+ys[-1]+suma)
+
+        return [[len(xs)-1,h,resultado]]
+
+    n=int(n)
+
+    if n%3!=0:
+        raise ValueError("n debe ser múltiplo de 3")
+
+    xs,ys=values_table(f,li,ls,n)
+
+    h=(ls-li)/n
+    suma=0
+
+    for i in range(1,n):
+        if i%3==0:
+            suma+=2*ys[i]
+        else:
+            suma+=3*ys[i]
+
+    resultado=(3*h/8)*(ys[0]+ys[-1]+suma)
+
+    return [[n,h,resultado]]
 
 def fixed_point(f, x0, tol, max_iter=50):
     list_output = []
@@ -186,7 +264,24 @@ def triplePtS(pts_x):
             raise ValueError("Los puntos en el eje X deben estar a la misma distancia (equidistantes).")
     return h
 
+def leer_puntos(texto):
+    """
+    formato:
+    0,1
+    1,2
+    2,5
+    """
+    xs=[]
+    ys=[]
 
+    lineas=texto.strip().split("\n")
+
+    for linea in lineas:
+        x,y=linea.split(",")
+        xs.append(float(x))
+        ys.append(float(y))
+
+    return np.array(xs),np.array(ys)
 
 def values_table(f, li, ls, n):
     n = int(n)
@@ -210,16 +305,90 @@ if "puntos" not in st.session_state:
     st.session_state.puntos = []
 
 with st.sidebar:
-    st.header("Configuración")
-    metodo_sel = st.selectbox("Método", list(dict_labels.keys()))
-    func_input = st.text_input("Función f(x)", value="x^2 - 4")
-    
-    params_input = {}
-    for label in dict_labels[metodo_sel][0]:
-        params_input[label] = st.text_input(f"Ingrese {label}", value="0")
 
-    tol = st.number_input("Tolerancia", value=1e-5, format="%.5f")
-    btn_start = st.button("CALCULAR", type="primary")
+    st.header("Configuración")
+
+    metodo_sel=st.selectbox(
+        "Método",
+        list(dict_labels.keys())
+    )
+
+    usa_puntos=False
+
+    if metodo_sel in ["Trapecio","Simpson13","Simpson38"]:
+
+        modo=st.radio(
+            "Entrada",
+            [
+                "Función",
+                "Ingresar puntos",
+                "Generar puntos"
+            ]
+        )
+
+        usa_puntos=modo!="Función"
+
+    if not usa_puntos:
+
+        func_input=st.text_input(
+            "Función f(x)",
+            value="x^2-4"
+        )
+
+    else:
+
+        func_input=""
+
+        if modo=="Ingresar puntos":
+
+            puntos_texto=st.text_area(
+            "Puntos x,y",
+"""0,1
+1,2
+2,5"""
+            )
+
+        elif modo=="Generar puntos":
+
+            func_generadora=st.text_input(
+                "Función para generar puntos",
+                "x^2"
+            )
+
+            g_li=st.number_input(
+                "Inicio",
+                value=0.0
+            )
+
+            g_ls=st.number_input(
+                "Fin",
+                value=4.0
+            )
+
+            cantidad=st.number_input(
+                "Cantidad de puntos",
+                value=5,
+                min_value=2
+            )
+
+
+    params_input={}
+    for label in dict_labels[metodo_sel][0]:
+        params_input[label]=st.text_input(
+            label,
+            value="0"
+        )
+
+    tol=st.number_input(
+        "Tolerancia",
+        value=1e-5,
+        format="%.5f"
+    )
+
+    btn_start=st.button(
+        "CALCULAR",
+        use_container_width=True
+    )
 
 # --- PROCESAMIENTO ---
 resultados = []
@@ -232,85 +401,351 @@ if "metodo_anterior" not in st.session_state:
 
 # Detectar cambio de método
 if metodo_sel != st.session_state.metodo_anterior:
-    st.session_state.calculado = False
-    st.session_state.resultados = []
-    st.session_state.puntos = []
+    st.session_state.calculado=False
+    st.session_state.resultados=[]
+    st.session_state.puntos=[]
 
-# Guardar método actual
-st.session_state.metodo_anterior = metodo_sel
+st.session_state.metodo_anterior=metodo_sel
+
 
 if btn_start:
     try:
-        exp_py = limpiar_expresion(func_input)
-        f = lambda x: eval(exp_py, {"x": x, "np": np, "math": math})
+
         res=[]
-        if metodo_sel == "Grafica basica":
-            st.session_state.puntos = []
-        elif metodo_sel == "Biseccion":
-            li = float(params_input["limite inferior"])
-            ls = float(params_input["limite superior"])
-            res = biseccion(f, li, ls, tol)
-            if isinstance(res, str):
-                st.error(res)
+
+        metodos_puntos=[
+            "Trapecio",
+            "Simpson13",
+            "Simpson38"
+        ]
+
+        # ---------------- VALIDACIONES ----------------
+
+        if metodo_sel in metodos_puntos:
+
+            if modo=="Función" and func_input.strip()=="":
+                st.error("Ingrese una función")
+                st.stop()
+
+            if modo=="Ingresar puntos" and puntos_texto.strip()=="":
+                st.error("Ingrese puntos")
+                st.stop()
+
+
+        # crear función solo si realmente se usa
+        f=None
+
+        if (
+            metodo_sel not in metodos_puntos
+            or modo=="Función"
+        ):
+            exp_py=limpiar_expresion(func_input)
+            f=lambda x: eval(
+                exp_py,
+                {"x":x,"np":np,"math":math}
+            )
+
+
+        # ------------ MÉTODOS ----------------
+
+        if metodo_sel=="Grafica basica":
+
+            st.session_state.puntos=[]
+
+
+        elif metodo_sel=="Biseccion":
+
+            li=float(params_input["limite inferior"])
+            ls=float(params_input["limite superior"])
+
+            res=biseccion(
+                f,
+                li,
+                ls,
+                tol
+            )
+
+            st.session_state.puntos=[
+                fila[2] for fila in res
+            ]
+
+
+        elif metodo_sel=="Newton":
+
+            df_expr=limpiar_expresion(
+                params_input["derivada de la funcion"]
+            )
+
+            df=lambda x: eval(
+                df_expr,
+                {"x":x,"np":np,"math":math}
+            )
+
+            x0=float(params_input["punto inicial"])
+
+            res=newton_raphson(
+                f,
+                df,
+                x0,
+                tol
+            )
+
+            st.session_state.puntos=[
+                fila[0] for fila in res
+            ]
+
+
+        elif metodo_sel=="Secante":
+
+            x0=float(params_input["x0"])
+            x1=float(params_input["x1"])
+
+            res=secante(
+                f,
+                x0,
+                x1,
+                tol
+            )
+
+            st.session_state.puntos=[
+                fila[2] for fila in res
+            ]
+
+
+        # --------- TRAPECIO ---------
+
+        elif metodo_sel=="Trapecio":
+
+            if modo=="Función":
+
+                li=float(
+                    params_input["limite inferior"]
+                )
+
+                ls=float(
+                    params_input["limite superior"]
+                )
+
+                n=int(
+                    params_input["n"]
+                )
+
+                res=trapecio(
+                    f=f,
+                    li=li,
+                    ls=ls,
+                    n=n
+                )
+
+            elif modo=="Ingresar puntos":
+
+                xs,ys=leer_puntos(
+                    puntos_texto
+                )
+
+                res=trapecio(
+                    xs=xs,
+                    ys=ys
+                )
+
             else:
-                st.session_state.resultados = res
-                st.session_state.puntos = [fila[2] for fila in res]
-        
-        
-        elif metodo_sel == "Newton":
-            df_expr = limpiar_expresion(params_input["derivada de la funcion"])
-            df = lambda x: eval(df_expr, {"x": x, "np": np, "math": math})
-            x0 = float(params_input["punto inicial"])
-            res = newton_raphson(f, df, x0, tol)
-            st.session_state.puntos = [fila[0] for fila in res]      
-    
-        elif metodo_sel == "Secante":
-            x0 = float(params_input["x0"])
-            x1 = float(params_input["x1"])
-            res = secante(f, x0, x1, tol)
-            st.session_state.puntos = [fila[2] for fila in res]      
-    
-        elif metodo_sel == "Trapecio":
-            li = float(params_input["limite inferior"])
-            ls = float(params_input["limite superior"])
-            n = int(params_input["n"])
-            res = trapecio(f, li, ls, n)
-            st.session_state.puntos = []      
 
-    
-        elif metodo_sel == "Simpson13":
-            li = float(params_input["limite inferior"])
-            ls = float(params_input["limite superior"])
-            n = int(params_input["n"])
-            res = simpson_tercio(f, li, ls, n)
-            st.session_state.puntos = []    
+                exp_gen=limpiar_expresion(
+                    func_generadora
+                )
 
-    
-        elif metodo_sel == "Simpson38":
-            li = float(params_input["limite inferior"])
-            ls = float(params_input["limite superior"])
-            n = int(params_input["n"])
-            res = simpson_38(f, li, ls, n)
-            st.session_state.puntos = []
- 
-    
-        elif metodo_sel == "Punto Fijo":
-            x0 = float(params_input["x inicial"])
-            res = fixed_point(f, x0, tol, 50)
-            st.session_state.puntos = [fila[2] for fila in res]      
+                g=lambda x: eval(
+                    exp_gen,
+                    {"x":x,"np":np}
+                )
 
-    
-        elif metodo_sel == "Muller":
-            x0 = float(params_input["x0"])
-            x1 = float(params_input["x1"])
-            x2 = float(params_input["x2"])
-            res = muller(f, x0, x1, x2, tol)
-            st.session_state.puntos = [fila[4] for fila in res]  
-        st.session_state.resultados = res    
-        st.session_state.calculado = True
+                xs=np.linspace(
+                    g_li,
+                    g_ls,
+                    int(cantidad)
+                )
+
+                ys=g(xs)
+
+                res=trapecio(
+                    xs=xs,
+                    ys=ys
+                )
+
+            st.session_state.puntos=[]
+
+
+        # -------- SIMPSON 1/3 --------
+
+        elif metodo_sel=="Simpson13":
+
+            if modo=="Función":
+
+                li=float(
+                    params_input["limite inferior"]
+                )
+
+                ls=float(
+                    params_input["limite superior"]
+                )
+
+                n=int(
+                    params_input["n"]
+                )
+
+                res=simpson_tercio(
+                    f=f,
+                    li=li,
+                    ls=ls,
+                    n=n
+                )
+
+            elif modo=="Ingresar puntos":
+
+                xs,ys=leer_puntos(
+                    puntos_texto
+                )
+
+                res=simpson_tercio(
+                    xs=xs,
+                    ys=ys
+                )
+
+            else:
+
+                exp_gen=limpiar_expresion(
+                    func_generadora
+                )
+
+                g=lambda x: eval(
+                    exp_gen,
+                    {"x":x,"np":np}
+                )
+
+                xs=np.linspace(
+                    g_li,
+                    g_ls,
+                    int(cantidad)
+                )
+
+                ys=g(xs)
+
+                res=simpson_tercio(
+                    xs=xs,
+                    ys=ys
+                )
+
+            st.session_state.puntos=[]
+
+
+        # -------- SIMPSON 3/8 --------
+
+        elif metodo_sel=="Simpson38":
+
+            if modo=="Función":
+
+                li=float(
+                    params_input["limite inferior"]
+                )
+
+                ls=float(
+                    params_input["limite superior"]
+                )
+
+                n=int(
+                    params_input["n"]
+                )
+
+                res=simpson_38(
+                    f=f,
+                    li=li,
+                    ls=ls,
+                    n=n
+                )
+
+            elif modo=="Ingresar puntos":
+
+                xs,ys=leer_puntos(
+                    puntos_texto
+                )
+
+                res=simpson_38(
+                    xs=xs,
+                    ys=ys
+                )
+
+            else:
+
+                exp_gen=limpiar_expresion(
+                    func_generadora
+                )
+
+                g=lambda x: eval(
+                    exp_gen,
+                    {"x":x,"np":np}
+                )
+
+                xs=np.linspace(
+                    g_li,
+                    g_ls,
+                    int(cantidad)
+                )
+
+                ys=g(xs)
+
+                res=simpson_38(
+                    xs=xs,
+                    ys=ys
+                )
+
+            st.session_state.puntos=[]
+
+
+        elif metodo_sel=="Punto Fijo":
+
+            x0=float(
+                params_input["x inicial"]
+            )
+
+            res=fixed_point(
+                f,
+                x0,
+                tol,
+                50
+            )
+
+            st.session_state.puntos=[
+                fila[2] for fila in res
+            ]
+
+
+        elif metodo_sel=="Muller":
+
+            x0=float(params_input["x0"])
+            x1=float(params_input["x1"])
+            x2=float(params_input["x2"])
+
+            res=muller(
+                f,
+                x0,
+                x1,
+                x2,
+                tol
+            )
+
+            st.session_state.puntos=[
+                fila[4] for fila in res
+            ]
+
+
+        st.session_state.resultados=res
+        st.session_state.calculado=True
+
 
     except Exception as e:
-        st.error(f"Error en la expresión: {e}")
+        st.error(
+            f"Error en la expresión: {e}"
+        )
         
 st.subheader("Consola de Resultados")
 if st.session_state.calculado and metodo_sel != "Grafica basica":
