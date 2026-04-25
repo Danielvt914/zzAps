@@ -4,7 +4,8 @@ import math
 import re
 import streamlit.components.v1 as components
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Fisica")
 
@@ -789,103 +790,125 @@ def graficar():
 
     try:
 
-        exp_py=limpiar_expresion(func_input)
-        f=lambda x: eval(
-            exp_py,
-            {"x":x,"np":np,"math":math}
-        )
-
-        fig,ax=plt.subplots(
-            figsize=(12,6)
-        )
+        f=crear_funcion(func_input)
 
         if len(st.session_state.puntos):
             centro=np.mean(st.session_state.puntos)
-            x=np.linspace(
-                centro-5,
-                centro+5,
-                1000
-            )
+            x=np.linspace(centro-5,centro+5,1500)
+        else:
+            x=np.linspace(-10,10,1500)
+
         y=f(x)
 
-        ax.plot(
-            x,
-            y,
-            label="f(x)"
+        fig=go.Figure()
+
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y,
+                mode="lines",
+                name="f(x)"
+            )
         )
 
-        ax.axhline(
-            0,
-            linewidth=1
-        )
-
-        ax.axvline(
-            0,
-            linewidth=1
-        )
-
-
-        # puntos iterativos
+        # iteraciones
         if len(st.session_state.puntos)>0:
 
-            px=np.array(
-                st.session_state.puntos
-            )
-
+            px=np.array(st.session_state.puntos)
             py=f(px)
 
-            ax.scatter(
-                px,
-                py,
-                s=60
+            fig.add_trace(
+                go.Scatter(
+                    x=px,
+                    y=py,
+                    mode="markers+text",
+                    text=[
+                        f"P{i}" for i in range(len(px))
+                    ],
+                    name="Iteraciones"
+                )
             )
 
-            for i,(xp,yp) in enumerate(zip(px,py)):
-                ax.annotate(
-                    f"P{i}",
-                    (xp,yp)
-                )
-
-
-        # -------- trapecio y simpson sombreado --------
-
+        # sombreado integral
         if (
-            metodo_sel in [
-                "Trapecio",
-                "Simpson13",
-                "Simpson38"
-            ]
-            and st.session_state.calculado
-            and 'li' in locals()
-            and 'ls' in locals()
+            metodo_sel in
+            ["Trapecio","Simpson13","Simpson38"]
+            and "li" in globals()
         ):
 
-            xx=np.linspace(
-                li,
-                ls,
-                300
-            )
-
+            xx=np.linspace(li,ls,500)
             yy=f(xx)
 
-            ax.fill_between(
-                xx,
-                yy,
-                0,
-                alpha=0.3
+            fig.add_trace(
+                go.Scatter(
+                    x=np.r_[xx,xx[::-1]],
+                    y=np.r_[yy,np.zeros_like(xx)],
+                    fill="toself",
+                    name="Área"
+                )
             )
 
+        fig.update_layout(
+            hovermode="x unified",
+            dragmode="pan"
+        )
 
-        ax.grid(True)
-        ax.legend()
-
-        st.pyplot(
+        st.plotly_chart(
             fig,
             use_container_width=True
         )
 
     except:
-        st.info(
-            "No se pudo graficar."
+        st.info("No se pudo graficar")
+def graficar_error():
+
+    if not st.session_state.resultados:
+        return
+
+    metodos_error={
+        "Biseccion":6,
+        "Newton":3,
+        "Secante":5,
+        "Punto Fijo":3
+    }
+
+    if metodo_sel not in metodos_error:
+        return
+
+    idx=metodos_error[metodo_sel]
+
+    errores=[
+        abs(fila[idx])
+        for fila in st.session_state.resultados
+    ]
+
+    it=np.arange(
+        1,
+        len(errores)+1
+    )
+
+    fig=go.Figure()
+
+    fig.add_trace(
+        go.Scatter(
+            x=it,
+            y=errores,
+            mode="lines+markers",
+            name="error"
         )
+    )
+
+    fig.update_yaxes(
+        type="log"
+    )
+
+    fig.update_layout(
+        title="Convergencia del error"
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True
+    )
 graficar()
+graficar_error()
