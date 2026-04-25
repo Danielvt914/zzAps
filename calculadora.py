@@ -29,7 +29,8 @@ dict_labels = {
     "Simpson13": [["limite inferior", "limite superior", "n"], ["n (par)", "h", "Resultado Integral"]],
     "Simpson38": [["limite inferior", "limite superior", "n"], ["n (múltiplo 3)", "h", "Resultado Integral"]],
     "Punto Fijo": [["x inicial"], ["iteración", "x_n", "f(x_n)", "error"]],
-    "Muller": [["x0", "x1", "x2"], ["iteración", "x0", "x1", "x2", "x3", "f(x3)"]]
+    "Muller": [["x0", "x1", "x2"], ["iteración", "x0", "x1", "x2", "x3", "f(x3)"]],
+    "Regresion Lineal": [[], ["Pendiente (m)", "Intercepto (b)", "r"]]
 }
 
 
@@ -66,6 +67,32 @@ def crear_funcion(expr):
     return f
 
 # --- TUS MÉTODOS NUMÉRICOS (Bisección simplificada para ejemplo) ---
+def regresion_lineal(xs, ys):
+
+    n = len(xs)
+
+    if n < 2:
+        raise ValueError("Se requieren al menos dos puntos")
+
+    x_mean = np.mean(xs)
+    y_mean = np.mean(ys)
+
+    sxy = np.sum((xs-x_mean)*(ys-y_mean))
+    sxx = np.sum((xs-x_mean)**2)
+
+    if sxx == 0:
+        raise ValueError("No puede calcularse pendiente")
+
+    m = sxy / sxx
+    b = y_mean - m*x_mean
+
+    # coef correlación
+    syy = np.sum((ys-y_mean)**2)
+
+    r = sxy / np.sqrt(sxx*syy)
+
+    return [[m,b,r]]
+
 
 def biseccion(f, a, b, tol=1e-2):
     list_output=[]
@@ -334,6 +361,16 @@ with st.sidebar:
     )
 
     usa_puntos=False
+    if metodo_sel=="Regresion Lineal":
+
+        puntos_texto = st.text_area(
+            "Datos x,y",
+    """1,2
+    2,4
+    3,5
+    4,4
+    5,6"""
+        )
 
     if metodo_sel in ["Trapecio","Simpson13","Simpson38"]:
 
@@ -469,7 +506,13 @@ if btn_start:
 
             st.session_state.puntos=[]
 
+        elif metodo_sel=="Regresion Lineal":
 
+            xs,ys = leer_puntos(puntos_texto)
+
+            res = regresion_lineal(xs,ys)
+
+            st.session_state.puntos=[]
         elif metodo_sel=="Biseccion":
 
             li=float(params_input["limite inferior"])
@@ -784,7 +827,61 @@ if st.session_state.calculado and metodo_sel != "Grafica basica":
             
 st.subheader("Visualización")
 def graficar():
+    if metodo_sel=="Regresion Lineal" and st.session_state.calculado:
 
+        xs,ys=leer_puntos(puntos_texto)
+
+        m=st.session_state.resultados[0][0]
+        b=st.session_state.resultados[0][1]
+
+        xr=np.linspace(
+            min(xs),
+            max(xs),
+            300
+        )
+
+        yr=m*xr+b
+
+        fig=go.Figure()
+
+        # puntos experimentales
+        fig.add_trace(
+            go.Scatter(
+                x=xs,
+                y=ys,
+                mode="markers",
+                name="Datos",
+                hovertemplate=
+                "x=%{x}<br>y=%{y}<extra></extra>"
+            )
+        )
+
+        # recta de ajuste
+        fig.add_trace(
+            go.Scatter(
+                x=xr,
+                y=yr,
+                mode="lines",
+                name=f"y={m:.4f}x+{b:.4f}",
+                hovertemplate=
+                "x=%{x}<br>y=%{y}<extra></extra>"
+            )
+        )
+
+        fig.update_layout(
+            title="Regresión lineal",
+            xaxis_title="x",
+            yaxis_title="y",
+            hovermode="closest",
+            dragmode="pan"
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+        return
     if func_input.strip()=="":
         return
 
