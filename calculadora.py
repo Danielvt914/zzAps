@@ -33,6 +33,10 @@ dict_labels = {
 
 
 # --- LÓGICA DE LIMPIEZA DE EXPRESIÓN (Adaptada de tu config_inputs) ---
+ALLOWED_GLOBALS = {
+    "np": np,
+    "math": math
+}
 def limpiar_expresion(expr):
     expr = expr.replace(' ', '').lower()
     expr = re.sub(r'root\(([^,]+),([^,]+)\)', r'(\1)**(1/\2)', expr)
@@ -45,6 +49,20 @@ def limpiar_expresion(expr):
     for h in sorted(correcciones.keys(), key=len, reverse=True):
         expr = re.sub(r'\b' + h + r'\b', correcciones[h], expr, flags=re.IGNORECASE)
     return expr.replace('np.np.', 'np.')
+
+
+
+def crear_funcion(expr):
+    expr = limpiar_expresion(expr)
+
+    def f(x):
+        return eval(
+            expr,
+            {"__builtins__": {}},
+            {**ALLOWED_GLOBALS, "x": x}
+        )
+
+    return f
 
 # --- TUS MÉTODOS NUMÉRICOS (Bisección simplificada para ejemplo) ---
 
@@ -441,10 +459,7 @@ if btn_start:
             or modo=="Función"
         ):
             exp_py=limpiar_expresion(func_input)
-            f=lambda x: eval(
-                exp_py,
-                {"x":x,"np":np,"math":math}
-            )
+            f = crear_funcion(exp_py)
 
 
         # ------------ MÉTODOS ----------------
@@ -477,10 +492,7 @@ if btn_start:
                 params_input["derivada de la funcion"]
             )
 
-            df=lambda x: eval(
-                df_expr,
-                {"x":x,"np":np,"math":math}
-            )
+            df=crear_funcion(df_expr)
 
             x0=float(params_input["punto inicial"])
 
@@ -787,7 +799,13 @@ def graficar():
             figsize=(12,6)
         )
 
-        x=np.linspace(-10,10,1000)
+        if len(st.session_state.puntos):
+            centro=np.mean(st.session_state.puntos)
+            x=np.linspace(
+                centro-5,
+                centro+5,
+                1000
+            )
         y=f(x)
 
         ax.plot(
@@ -853,6 +871,7 @@ def graficar():
             ax.fill_between(
                 xx,
                 yy,
+                0,
                 alpha=0.3
             )
 
