@@ -30,7 +30,8 @@ dict_labels = {
     "Simpson38": [["limite inferior", "limite superior", "n"], ["n (múltiplo 3)", "h", "Resultado Integral"]],
     "Punto Fijo": [["x inicial"], ["iteración", "x_n", "f(x_n)", "error"]],
     "Muller": [["x0", "x1", "x2"], ["iteración", "x0", "x1", "x2", "x3", "f(x3)"]],
-    "Regresion Lineal": [[], ["Pendiente (m)", "Intercepto (b)", "r"]]
+    "Regresion Lineal": [[], ["Pendiente (m)", "Intercepto (b)", "r"]],
+    "Diferenciacion Numerica": [[], ["x", "f(x)", "Forward", "Backward", "Central"]],
 }
 
 
@@ -67,6 +68,41 @@ def crear_funcion(expr):
     return f
 
 # --- TUS MÉTODOS NUMÉRICOS (Bisección simplificada para ejemplo) ---
+def diferenciacion_numerica(xs, ys):
+
+    if len(xs) < 3:
+        raise ValueError("Se requieren al menos 3 puntos")
+
+    h=triplePtS(xs)
+
+    salida=[]
+
+    for i in range(len(xs)):
+
+        forward=None
+        backward=None
+        central=None
+
+        if i < len(xs)-1:
+            forward=(ys[i+1]-ys[i])/h
+
+        if i>0:
+            backward=(ys[i]-ys[i-1])/h
+
+        if i>0 and i<len(xs)-1:
+            central=(ys[i+1]-ys[i-1])/(2*h)
+
+        salida.append([
+            xs[i],
+            ys[i],
+            forward,
+            backward,
+            central
+        ])
+
+    return salida
+
+
 def regresion_lineal(xs, ys):
 
     n = len(xs)
@@ -361,8 +397,10 @@ with st.sidebar:
     )
 
     usa_puntos=False
-    if metodo_sel=="Regresion Lineal":
-
+    if metodo_sel in [
+        "Regresion Lineal",
+        "Diferenciacion Numerica"
+    ]:
         puntos_texto = st.text_area(
             "Datos x,y",
     """1,2
@@ -511,6 +549,15 @@ if btn_start:
             xs,ys = leer_puntos(puntos_texto)
 
             res = regresion_lineal(xs,ys)
+
+            st.session_state.puntos=[]
+        elif metodo_sel=="Diferenciacion Numerica":
+            xs,ys=leer_puntos(puntos_texto)
+
+            res=diferenciacion_numerica(
+                xs,
+                ys
+            )
 
             st.session_state.puntos=[]
         elif metodo_sel=="Biseccion":
@@ -827,6 +874,74 @@ if st.session_state.calculado and metodo_sel != "Grafica basica":
             
 st.subheader("Visualización")
 def graficar():
+    if metodo_sel=="Diferenciacion Numerica" and st.session_state.calculado:
+
+        xs,ys=leer_puntos(puntos_texto)
+
+        df=pd.DataFrame(
+            st.session_state.resultados,
+            columns=[
+                "x",
+                "y",
+                "Forward",
+                "Backward",
+                "Central"
+            ]
+        )
+
+        fig=go.Figure()
+
+        fig.add_trace(
+            go.Scatter(
+                x=xs,
+                y=ys,
+                mode="markers+lines",
+                name="Datos"
+            )
+        )
+
+        if df["Forward"].notna().any():
+            fig.add_trace(
+                go.Scatter(
+                    x=df["x"],
+                    y=df["Forward"],
+                    mode="lines+markers",
+                    name="Forward"
+                )
+            )
+
+        if df["Backward"].notna().any():
+            fig.add_trace(
+                go.Scatter(
+                    x=df["x"],
+                    y=df["Backward"],
+                    mode="lines+markers",
+                    name="Backward"
+                )
+            )
+
+        if df["Central"].notna().any():
+            fig.add_trace(
+                go.Scatter(
+                    x=df["x"],
+                    y=df["Central"],
+                    mode="lines+markers",
+                    name="Central"
+                )
+            )
+
+        fig.update_layout(
+            title="Diferenciación Numérica",
+            dragmode="pan",
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
+
+        return
     if metodo_sel=="Regresion Lineal" and st.session_state.calculado:
 
         xs,ys=leer_puntos(puntos_texto)
